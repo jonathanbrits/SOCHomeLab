@@ -1,4 +1,4 @@
-<h1>SOC Automation Home Lab with Wazuh SIEM and Kali Linuxb</h1>
+<h1>SOC Automation Home Lab with Wazuh SIEM and Kali Linux</h1>
 
 
 

@@ -1,51 +1,108 @@
-<h1>SOC Automation Home Lab</h1>
+<h1>SOC Automation Home Lab with Wazuh SIEM and Kali Linuxb</h1>
 
 
 
 <h2>Description</h2>
-Project consists of a simple PowerShell script that walks the user through "zeroing out" (wiping) any drives that are connected to the system. The utility allows you to select the target disk and choose the number of passes that are performed. The PowerShell script will configure a diskpart script file based on the user's selections and then launch Diskpart to perform the disk sanitization.
+This project is a SOC automation and detection lab initially based on a YouTube series by MyDFIR that used a Windows 11 endpoint with Sysmon forwarding logs to Wazuh SIEM. However, due to hardware constraints (MacBook M4 Pro, no native Windows virtualization), I reworked the lab to use Kali Linux as the monitored endpoint. This report documents the complete build process, all key differences from the original tutorial, challenges encountered during deployment, and the resulting functional Wazuh monitoring environment.
 <br />
 
 
-<h2>Languages and Utilities Used</h2>
+<h2>Languages, Tools, and Environments Used</h2>
 
-- <b>PowerShell</b> 
-- <b>Diskpart</b>
+- <b>Host Machine: MacBook M4 Pro</b> 
+- <b>UTM: Kali Linux</b>
+- <b>VirtualBox: Windows 11 ARM VM (Sysmon installed but Wazuh Windows agent failed)</b>
+- <b>Cloud Provider: Vultr - Miami Region</b>
+- <b>Services Deployed: Wazuh + TheHive</b>
+- <b>Wazuh SIEM: Threat Hunting, IT Hygiene, NIST 800-53 compliance, event analysis</b>
+- <b>Wazuh Linux Agent: Installed on Kali for log collection</b>
+- <b>TheHive: Incident Response platform (web UI running)</b>
+- <b>Kali tools: sudo activity, authentication logs, package installs, process data</b>
+- <b>Bash / Shell scripting (agent setup, system checks)</b>
+- <b>YAML (Wazuh configuration)</b>
+- <b>JSON (Wazuh rules/decoders output)</b>
 
-<h2>Environments Used </h2>
 
-- <b>Windows 10</b> (21H2)
 
 <h2>Program walk-through:</h2>
 
 <p align="center">
-Launch the utility: <br/>
-<img src="https://i.imgur.com/62TgaWL.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+Windows Sysmon Service Attempt: <br/>
+<img src="https://i.imgur.com/eIIvkdP.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> This shows Sysmon64a, the ARM version of Sysmon, running on the Windows 11 ARM VM. The Wazuh agent isn’t fully compatible with Windows ARM, so telemetry and Sysmon integration didn’t work properly. Because of this, the endpoint testing was switched to Kali Linux.
 <br />
+Wazuh Server Deployment (Vultr): <br/>
+<img src="https://i.imgur.com/9Y6sSsr.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> Ubuntu 24.04 VM on Vultr used to host the Wazuh Manager and Dashboard for centralized SIEM/log analysis.
+<br /> 
+TheHive Server Deployment (Vultr):  <br/>
+<img src="https://i.imgur.com/Lzniqki.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> Ubuntu 24.04 instance intended to run TheHive for incident case management. Deployed successfully, but not used due to ARM/agent issues.
 <br />
-Select the disk:  <br/>
-<img src="https://i.imgur.com/tcTyMUE.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+Kali Linux Endpoint — Wazuh Agent Installation: <br/>
+<img src="https://i.imgur.com/NQuh6dR.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> Installed the Wazuh agent on Kali Linux using the ARM64 package and configured it to communicate with the cloud Wazuh Manager at 207.246.78.150. Due to compatibility issues with Windows 11 ARM, Kali Linux was used as the primary monitored endpoint.
 <br />
+Creating SIEM Test User & Netcat Listener:  <br/>
+<img src="https://i.imgur.com/fYiUuPO.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> Creation of the siemtestuser account and setup of a Netcat listener on port 4444 to simulate suspicious activity for Wazuh.
 <br />
-Enter the number of passes: <br/>
-<img src="https://i.imgur.com/nCIbXbg.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+SSH Brute-Force Simulation:  <br/>
+<img src="https://i.imgur.com/1Y9qK3a.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> Looped SSH login attempts against localhost to generate authentication failure events for Wazuh detection.
 <br />
+Nmap SYN Scan:  <br/>
+<img src="https://i.imgur.com/X2cqUTh.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> Executing sudo nmap -sS 127.0.0.1 to simulate reconnaissance activity on the Kali endpoint. This generates detectable events for Wazuh, validating that the SIEM can identify and log port-scanning behavior often used in early-stage attacks.
+<br /> 
+Wazuh Dashboard Overview:  <br/>
+<img src="https://i.imgur.com/H7jZcNf.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> This view shows the main Wazuh dashboard with overall alert statistics, confirming that the manager is running and receiving data from agents.
 <br />
-Confirm your selection:  <br/>
-<img src="https://i.imgur.com/cdFHBiU.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+Agent Status Page:  <br/>
+<img src="https://i.imgur.com/BJnmT7r.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> This view shows the Kali Linux endpoint listed as an active agent. It confirms that the agent is installed correctly and communicating with the Wazuh manager.
 <br />
+Security Events Summary:  <br/>
+<img src="https://i.imgur.com/YXpXdSx.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> This view shows all security events generated by my Kali machine. It verifies that Wazuh is detecting the actions performed during testing.
 <br />
-Wait for process to complete (may take some time):  <br/>
-<img src="https://i.imgur.com/JL945Ga.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+Threat Hunting Dashboard:  <br/>
+<img src="https://i.imgur.com/6SnXonm.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> This view shows grouped events such as authentication failures, process activity, and system behavior. It helps triage and investigate suspicious activity.
 <br />
+MITRE ATT&CK:  <br/>
+<img src="https://i.imgur.com/bVIUyUy.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> This view shows how Wazuh mapped alerts from my Kali endpoint to MITRE tactics and techniques. It highlights detection coverage for common attack behaviors.
 <br />
-Sanitization complete:  <br/>
-<img src="https://i.imgur.com/K71yaM2.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+Malware Detection Dashboard:  <br/>
+<img src="https://i.imgur.com/wKkQwKo.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> This view lists malware related alerts from tools like rootcheck and yara. It confirms the system scan and integrity checks were executed.
 <br />
+Configuration Assessment (CIS Scan):  <br/>
+<img src="https://i.imgur.com/8gQJ22y.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> This view shows compliance scan results based on CIS benchmarks. It displays which configuration checks passed or failed on the Kali endpoint.
 <br />
-Observe the wiped disk:  <br/>
-<img src="https://i.imgur.com/AeZkvFQ.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+IT Hygiene Inventory:  <br/>
+<img src="https://i.imgur.com/hphBcCT.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> This view shows the system inventory for the Kali machine, including processes, packages, ports, and hardware information.
+<br />
+NIST Compliance Dashboard:  <br/>
+<img src="https://i.imgur.com/fHOUj2b.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br /> This view shows alerts categorized under NIST 800-53 controls. It demonstrates how Wazuh aligns endpoint activity with compliance requirements.
+<br />
 </p>
+
+<h2>Problems Encountered</h2>
+Wazuh service on Windows would not start. The Windows 11 ARM VM could not run the Wazuh agent, and the wazuhsvc service failed to start due to ARM compatibility issues. Because the Windows agent didn’t work, Kali Linux became the primary endpoint used for log collection and attack simulation. TheHive was installed but not used; although it was deployed for incident management, it was not directly used for alert/case workflow due to ARM or agent support issues. This resulted in a major platform adaptation and tool choice pivot, shifting from the intended Windows/Sysmon lab to using Kali Linux as the monitored endpoint due to compatibility barriers.
+
+<h2>Final Results</h2>
+Wazuh successfully collected logs and security events from the Kali Linux endpoint, and all main dashboards populated with alert data, configuration assessment results, and system inventory. The MITRE ATT&CK mapping worked correctly and displayed the techniques associated with the simulated activity. The attack actions performed on Kali, including SSH brute-force attempts and the nmap -sS scan, generated detectable events that appeared in Wazuh, confirming that the SIEM was receiving, parsing, and classifying the telemetry as expected.
+
+
+<h2>Conclusion / What I Learned</h2>
+This project showed how to build a small SOC style lab using cloud infrastructure and open source tools, and how to adapt when the original plan does not work, such as dropping the Windows ARM agent and switching to Kali. I gained hands-on experience deploying Wazuh, registering an endpoint, generating realistic attacker style activity, and confirming that the SIEM can detect and categorize those events using dashboards and MITRE views.
+
 
 <!--
  ```diff
